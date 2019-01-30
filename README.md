@@ -39,5 +39,9 @@ Exemplary 'rosenv.cvs' content:
 # Hacks
 Add a line like `,127.0.0.1,http://127.0.0.1:11311` (notice no env name!) and just type `rosenv` (without arg) for switching to this one.
 
+# Tested on
+Ubuntu 16.04.5 LTS  
+GNU bash, version 4.3.48(1)-release (x86_64-pc-linux-gnu)
+
 ---
 (c) 2018 tw

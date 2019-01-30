@@ -92,7 +92,6 @@ $(<$envs)
 -------------------------------------
 $how
 EOL
-
   return 20
   fi
 
@@ -111,6 +110,8 @@ EOL
   # Evaluating variables in a string https://stackoverflow.com/a/18219315
   export ROS_IP=$(eval echo "${arrIN[1]}")
   export ROS_MASTER_URI="${arrIN[2]}"
+  # https://wiki.ros.org/ROS/EnvironmentVariables#ROS_IP.2BAC8-ROS_HOSTNAME
+  # ROS_IP and ROS_HOSTNAME are optional environment variable [...] are mutually exclusive, if both are set ROS_HOSTNAME will take precedence.
   export ROS_HOSTNAME="$ROS_IP"
 
   # flash message
