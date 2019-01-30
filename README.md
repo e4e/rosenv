@@ -1,5 +1,5 @@
 # rosenv
-Bash addon script to change ROS environments quickly
+Bash addon script to change ROS environments quickly and persistent across shells
 
 ---
 ## How to use:
