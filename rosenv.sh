@@ -1,18 +1,15 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # rosenv.sh
 # Bash addon script to change ROS environments quickly
-# Created by tw 2018-09-24
-# Reworked by tw 2019-01-29
+# Created ~tw 2018-09-24
+# Reworked ~tw 2019-01-29
+# csv path, flow ~tw 2019-02-01
 
-# How to use:
-# source this script in your .bashrc 'source PATH/TO/rosenv.sh'
-# Usage: rosenv|re ENV_NAME
-# to change default install dir: export ROSENV_DIR=path (default: ~/rosenv) before sourcing
-# to use a different subnet ip: export ROSENV_SUBNET=10.0 (default: 192.)
-# Hacks: Add a line like `,127.0.0.1,http://127.0.0.1:11311` (notice no env name!) and just type `rosenv` (without arg) for switching to this one.
 
+#
 # get the ip address
 # param $1: specific interface name | search localIp
+#
 _re_getIp () {
   local localIp=$(if [ -n "$ROSENV_SUBNET" ]; then echo "$ROSENV_SUBNET"; else echo "192."; fi)
 
@@ -24,17 +21,20 @@ _re_getIp () {
 
   return 0
 }
+getIP () { _re_getIp "$@"; } && export -f getIP
+#alias getIP='_re_getIp' THIS DOES NOT WORK IN NON-INTERACTIVE SHELLS
 
-alias getIP='_re_getIp'
-
-
+#
 # set specific ROS env variables persisten across shells
+# param $1: search str in .csv
+#
 _re_setEnv () {
-  local fun=rosenv
-  local sep=,
-  local dir=$(if [ -n "$ROSENV_DIR" ]; then echo "$ROSENV_DIR"; else echo "$HOME/$fun"; fi)
-  local file="$fun.cvs"
-  local save=".$fun"
+  local _name='rosenv'
+  local caller="${FUNCNAME[1]}"
+  local sep=','
+  local dir=$(if [ -n "$ROSENV_DIR" ]; then echo "$ROSENV_DIR"; else echo "$(dirname "${BASH_SOURCE[0]}")"; fi)
+  local file="$_name.csv"
+  local save=".$_name"
   local envs="$dir/$file"
   local last="$dir/$save"
   # colors
@@ -56,17 +56,16 @@ Exemplary '$file' content:
   hal,dave-pc,http://2.0.0.1:9000
 "
 
-  # sanity check
+  # sanity check or setup
   if [ ! -r "$envs" ]; then
-    mkdir -p "$dir"
-    echo 'local,127.0.0.1,http://127.0.0.1:11311' > "$envs"
-    echo 'local' > "$last"
-    cat << EOL
-Hello from $fun!
-'$envs' created.
-$how
-EOL
-  return 10
+    echo -e "Setting up $_name ..."
+    mkdir -p "$dir" &&\
+    echo 'local,127.0.0.1,http://127.0.0.1:11311' > "$envs" &&\
+    chmod 644 "$envs" &&\
+    echo 'local' > "$last" &&\
+    echo -e "$C Hello from $I $_name $Z\n'$envs' file created.\n$how" ||\
+    echo -e "$E$_name setup failed.$Z"
+    return 10
   fi
 
   # triggered only if this function is called the first time in a new shell
@@ -80,26 +79,25 @@ EOL
   # find env sting in envs file
   IN=$(grep "^$1," "$envs")
   if [ -z "$IN" ]; then
+    echo -e "${E}ROS environment '$1' not found.$Z"
     cat << EOL
-ROS environment '$1' not found.
-
-Usage: $fun ENV_NAME
-Try '$fun local' for the local environment.
+Usage: $caller ENV_NAME
+Try '$caller local' for the local environment.
 
 Currently available ROS environments:
 -------------------------------------
-$(<$envs)
+$(<"$envs")
 -------------------------------------
 $how
 EOL
-  return 20
+    return 20
   fi
 
   # split string into array
   # How do I split a string on a delimiter in Bash? https://stackoverflow.com/a/5257398
   IFS=$sep arrIN=($IN)
   if [ -z "${arrIN[2]}" ]; then
-    echo -e "${E}Invalid environment csv form at '$1'.$Z"
+    echo -e "${E}Invalid environment .csv line at '$1'.$Z"
     return 30
   fi
 
@@ -108,19 +106,21 @@ EOL
 
   # set ROS
   # Evaluating variables in a string https://stackoverflow.com/a/18219315
-  export ROS_IP=$(eval echo "${arrIN[1]}")
-  export ROS_MASTER_URI="${arrIN[2]}"
+  export ROS_IP="$(eval echo "${arrIN[1]}")"
+  export ROS_MASTER_URI="$(eval echo "${arrIN[2]}")"
   # https://wiki.ros.org/ROS/EnvironmentVariables#ROS_IP.2BAC8-ROS_HOSTNAME
-  # ROS_IP and ROS_HOSTNAME are optional environment variable [...] are mutually exclusive, if both are set ROS_HOSTNAME will take precedence.
+  # "ROS_IP and ROS_HOSTNAME are optional environment variable [...] mutually exclusive, if both are set ROS_HOSTNAME will take precedence."
   export ROS_HOSTNAME="$ROS_IP"
 
   # flash message
-  echo -e "$C $fun $I $1 $Y ROS_IP/ROS_HOSTNAME $I $ROS_IP $Y ROS_MASTER_URI $I $ROS_MASTER_URI $Y $(rosversion -d) $Z"
+  echo -e "$C $caller $I $1 $Y ROS_IP/ROS_HOSTNAME $I $ROS_IP $Y ROS_MASTER_URI $I $ROS_MASTER_URI $Y $(rosversion -d) $Z"
 
   return 0
 }
 
-_re_isSet=0
-_re_setEnv
-alias rosenv='_re_setEnv'
-alias re='rosenv'
+# https://stackoverflow.com/questions/41532874/use-bash-alias-name-in-a-function-that-was-called-using-that-alias
+# crude workaround
+rosenv () { _re_setEnv "$@"; } && export -f rosenv
+
+# one-time fire
+_re_isSet=0 && rosenv
