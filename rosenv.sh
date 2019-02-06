@@ -24,6 +24,7 @@ _re_getIp () {
 getIP () { _re_getIp "$@"; } && export -f getIP
 #alias getIP='_re_getIp' THIS DOES NOT WORK IN NON-INTERACTIVE SHELLS
 
+
 #
 # set specific ROS env variables persisten across shells
 # param $1: search str in .csv
