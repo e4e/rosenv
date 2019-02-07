@@ -30,12 +30,13 @@ getIP () { _re_getIp "$@"; } && export -f getIP
 # param $1: search str in .csv
 #
 _re_setEnv () {
-  local _name='rosenv'
+  local name='rosenv'
   local caller="${FUNCNAME[1]}"
-  local sep=','
+  # be sure to have local IFS, else shell autocompletion will be fucked up!
+  local IFS=','
   local dir=$(if [ -n "$ROSENV_DIR" ]; then echo "$ROSENV_DIR"; else echo "$(dirname "${BASH_SOURCE[0]}")"; fi)
-  local file="$_name.csv"
-  local save=".$_name"
+  local file="$name.csv"
+  local save=".$name"
   local envs="$dir/$file"
   local last="$dir/$save"
   # colors
@@ -59,26 +60,26 @@ Exemplary '$file' content:
 
   # sanity check or setup
   if [ ! -r "$envs" ]; then
-    echo -e "Setting up $_name ..."
+    echo -e "Setting up $name ..."
     mkdir -p "$dir" &&\
     echo 'local,127.0.0.1,http://127.0.0.1:11311' > "$envs" &&\
     chmod 644 "$envs" &&\
     echo 'local' > "$last" &&\
-    echo -e "$C Hello from $I $_name $Z\n'$envs' file created.\n$how" ||\
-    echo -e "$E$_name setup failed.$Z"
+    echo -e "$C Hello from $I $name $Z\n'$envs' file created.\n$how" ||\
+    echo -e "$E$name setup failed.$Z"
     return 10
   fi
 
   # triggered only if this function is called the first time in a new shell
   # auto sets the last env
-  if [ "$_re_isSet" -eq "0" ]; then
+  if [ $_re_isSet -eq 0 ]; then
     # How to change a command line argument in Bash? https://stackoverflow.com/a/4827707
     set -- $(<"$last")
     _re_isSet=1
   fi
 
   # find env sting in envs file
-  IN=$(grep "^$1," "$envs")
+  local IN=$(grep "^$1," "$envs")
   if [ -z "$IN" ]; then
     echo -e "${E}ROS environment '$1' not found.$Z"
     cat << EOL
@@ -96,7 +97,7 @@ EOL
 
   # split string into array
   # How do I split a string on a delimiter in Bash? https://stackoverflow.com/a/5257398
-  IFS=$sep arrIN=($IN)
+  local arrIN=($IN)
   if [ -z "${arrIN[2]}" ]; then
     echo -e "${E}Invalid environment .csv line at '$1'.$Z"
     return 30

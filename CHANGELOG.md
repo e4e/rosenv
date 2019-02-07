@@ -1,5 +1,7 @@
 # Changelog
 
+- fixed IFS overwrite breaking shell autocompletion
+
 + Changed default csv file dir to same location as rosenv.sh is sourced from.
 + Prettied prints.
 + Undocumented `alias re='rosenv'` removed. Set manually if needed, after sourcing.  
