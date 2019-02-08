@@ -32,17 +32,18 @@ getIP () { _re_getIp "$@"; } && export -f getIP
 _re_setEnv () {
   local name='rosenv'
   local caller="${FUNCNAME[1]}"
-  # be sure to have local IFS, else shell autocompletion will be fucked up!
+  # be sure to have local IFS, else shell tabcompletion will be fucked up!
   local IFS=','
   local dir=$(if [ -n "$ROSENV_DIR" ]; then echo "$ROSENV_DIR"; else echo "$(dirname "${BASH_SOURCE[0]}")"; fi)
   local file="$name.csv"
   local save=".$name"
-  local envs="$dir/$file"
+  # not local! make visible for tabcompletion function
+  _re_envs="$dir/$file"
   local last="$dir/$save"
   # colors
   local C='\033[97;104m' Z='\033[0m' I='\033[7m' Y='\033[27m' E='\033[91m'
   local how="
-Add more environments in '$envs', one per line, in the form:
+Add more environments in '$_re_envs', one per line, in the form:
 
   env name,ROS_IP/ROS_HOSTNAME,ROS_MASTER_URI[,comment]
 
@@ -59,13 +60,13 @@ Exemplary '$file' content:
 "
 
   # sanity check or setup
-  if [ ! -r "$envs" ]; then
+  if [ ! -r "$_re_envs" ]; then
     echo -e "Setting up $name ..."
     mkdir -p "$dir" &&\
-    echo 'local,127.0.0.1,http://127.0.0.1:11311' > "$envs" &&\
-    chmod 644 "$envs" &&\
+    echo 'local,127.0.0.1,http://127.0.0.1:11311' > "$_re_envs" &&\
+    chmod 644 "$_re_envs" &&\
     echo 'local' > "$last" &&\
-    echo -e "$C Hello from $I $name $Z\n'$envs' file created.\n$how" ||\
+    echo -e "$C Hello from $I $name $Z\n'$_re_envs' file created.\n$how" ||\
     echo -e "$E$name setup failed.$Z"
     return 10
   fi
@@ -79,7 +80,7 @@ Exemplary '$file' content:
   fi
 
   # find env sting in envs file
-  local IN=$(grep "^$1," "$envs")
+  local IN=$(grep "^$1," "$_re_envs")
   if [ -z "$IN" ]; then
     echo -e "${E}ROS environment '$1' not found.$Z"
     cat << EOL
@@ -88,7 +89,7 @@ Try '$caller local' for the local environment.
 
 Currently available ROS environments:
 -------------------------------------
-$(<"$envs")
+$(<"$_re_envs")
 -------------------------------------
 $how
 EOL
@@ -123,6 +124,13 @@ EOL
 # https://stackoverflow.com/questions/41532874/use-bash-alias-name-in-a-function-that-was-called-using-that-alias
 # crude workaround
 rosenv () { _re_setEnv "$@"; } && export -f rosenv
+
+# Writing your own Bash Completion Function http://fahdshariff.blogspot.com/2011/04/writing-your-own-bash-completion.html
+_re_complete () {
+  local cur=${COMP_WORDS[COMP_CWORD]}
+  COMPREPLY=( $(compgen -W "$(grep -o "^[^,]*" "$_re_envs")" -- $cur) )
+}
+complete -F _re_complete rosenv
 
 # one-time fire
 _re_isSet=0 && rosenv
